@@ -56,44 +56,69 @@ export class PalettePanel {
         const ctx = this.stripCanvas.getContext('2d');
         const n = this.colors.length;
         // Cap the strip canvas height so extremely large palettes don't blow up
-        // memory; the panel scrolls. 4096 swatches * 14px is plenty to scroll.
+        // memory; the panel scrolls. 4096 swatches is plenty to scroll.
         const maxRows = Math.min(n, 4096);
-        const w = 36;
-        const h = maxRows * this.swatchH;
-        this.stripCanvas.width = w;
-        this.stripCanvas.height = Math.max(1, h);
+        const cols = 2;
+        const cellW = 36;
+        const cellH = this.swatchH;
+        const rows = Math.ceil(maxRows / cols);
+        this.stripCanvas.width = cols * cellW;
+        this.stripCanvas.height = Math.max(1, rows * cellH);
+        this._cols = cols;
+        this._cellW = cellW;
+        this._cellH = cellH;
         this.layout = [];
         for (let i = 0; i < maxRows; i++) {
+            const cx = i % cols;
+            const cy = (i / cols) | 0;
             const c = this.colors[i];
             ctx.fillStyle = c.hex;
-            ctx.fillRect(0, i * this.swatchH, w, this.swatchH);
-            this.layout.push({ y0: i * this.swatchH, y1: (i + 1) * this.swatchH, color: c });
+            ctx.fillRect(cx * cellW, cy * cellH, cellW, cellH);
+            this.layout.push({
+                x0: cx * cellW, y0: cy * cellH,
+                x1: (cx + 1) * cellW, y1: (cy + 1) * cellH,
+                color: c
+            });
         }
     }
 
     _bind() {
         this.stripCanvas.addEventListener('mousemove', (e) => {
-            const rect = this.stripCanvas.getBoundingClientRect();
-            const y = (e.clientY - rect.top) * (this.stripCanvas.height / rect.height);
-            const hit = this.layout.find(l => y >= l.y0 && y < l.y1);
+            const hit = this._hitTest(e);
             if (hit) this._highlight(hit.color);
         });
         this.stripCanvas.addEventListener('mouseleave', () => this._clearOverlay());
         this.stripCanvas.addEventListener('click', (e) => {
-            const rect = this.stripCanvas.getBoundingClientRect();
-            const y = (e.clientY - rect.top) * (this.stripCanvas.height / rect.height);
-            const hit = this.layout.find(l => y >= l.y0 && y < l.y1);
+            const hit = this._hitTest(e);
             if (hit) this._copy(hit.color);
         });
     }
 
+    _hitTest(e) {
+        const rect = this.stripCanvas.getBoundingClientRect();
+        const sx = this.stripCanvas.width / rect.width;
+        const sy = this.stripCanvas.height / rect.height;
+        const x = (e.clientX - rect.left) * sx;
+        const y = (e.clientY - rect.top) * sy;
+        return this.layout.find(l => x >= l.x0 && x < l.x1 && y >= l.y0 && y < l.y1);
+    }
+
     _highlight(color) {
         if (!this.imageData) return;
-        // Size the overlay to match the image canvas's displayed pixels.
+        // Backing store at image pixel resolution (crisp 1:1 highlight pixels).
         const w = this.imageData.width;
         const h = this.imageData.height;
         if (this.overlay.width !== w) this.overlay.width = w;
         if (this.overlay.height !== h) this.overlay.height = h;
+
+        // Display size = the image canvas's rendered size on screen. This keeps
+        // the overlay exactly aligned with the visible image regardless of how
+        // big the canvas frame is (e.g. when the other panel's palette is huge).
+        const dispW = this.imageCanvas.clientWidth || w;
+        const dispH = this.imageCanvas.clientHeight || h;
+        this.overlay.style.width = dispW + 'px';
+        this.overlay.style.height = dispH + 'px';
+
         const ctx = this.overlay.getContext('2d');
         const src = this.imageData.data;
         const out = ctx.createImageData(w, h);
@@ -129,6 +154,8 @@ export class PalettePanel {
         const ctx = this.overlay.getContext('2d');
         ctx.clearRect(0, 0, this.overlay.width, this.overlay.height);
         this.overlay.classList.remove('visible');
+        this.overlay.style.width = '';
+        this.overlay.style.height = '';
     }
 
     _copy(color) {

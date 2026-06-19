@@ -61,8 +61,10 @@
                 </div>
                 <div class="canvas-row">
                     <div class="canvas-frame" id="rightContainer">
-                        <canvas id="refinedCanvas" class="hidden"></canvas>
-                        <canvas id="refOverlay" class="palette-overlay"></canvas>
+                        <div class="canvas-stack">
+                            <canvas id="refinedCanvas" class="hidden"></canvas>
+                            <canvas id="refOverlay" class="palette-overlay"></canvas>
+                        </div>
                         <span class="no-result" id="noResult">Processed image will appear here</span>
                     </div>
                     <div class="palette-strip-wrap">

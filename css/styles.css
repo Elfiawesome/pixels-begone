@@ -128,14 +128,17 @@ body {
 }
 
 .canvas-row {
-    flex: 1;
+    /* Definite viewport-anchored height (NOT flex:1, which would override it
+       and grow to the palette canvas's huge intrinsic height). */
+    height: clamp(280px, 55vh, 560px);
     display: flex;
     gap: 8px;
-    min-height: 280px;
 }
 
 .canvas-frame {
     flex: 1;
+    height: 100%;
+    min-height: 0;
     background: #0a0a0f;
     border: 1px solid var(--border);
     border-radius: 0;
@@ -150,13 +153,14 @@ body {
     border-color: var(--accent);
 }
 
-/* Stack that holds the image canvas + overlay so the overlay can sit exactly on
-   top of the image. Sized by the flex frame; image scales to fit. */
+/* Stack that shrink-wraps the image canvas so the overlay can sit exactly on
+   top of the displayed image, regardless of the frame's size. */
 .canvas-stack {
     position: relative;
+    display: inline-block;
+    line-height: 0;
     max-width: 100%;
     max-height: 100%;
-    line-height: 0;
 }
 .canvas-stack canvas {
     display: block;
@@ -168,8 +172,8 @@ body {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    /* Display size is set in JS to match the image canvas's rendered size, so
+       the overlay always lines up with the visible image. */
     pointer-events: none;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
@@ -180,9 +184,15 @@ body {
     opacity: 1;
 }
 
-/* Vertical swatch strip beside the canvas. */
+/* Two-column swatch grid beside the canvas, scrolls inside the fixed height. */
 .palette-strip-wrap {
-    width: 44px;
+    width: 80px;
+    height: 100%;
+    /* Critical: overrides the flex-item default `min-height: auto` so the wrap
+       can shrink to the canvas-row's height instead of growing to the palette
+       canvas's intrinsic (potentially huge) height. Without this, overflow-y
+       never engages and the page expands. */
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
     background: var(--bg);
@@ -567,5 +577,5 @@ iconify-icon {
     .workspace { grid-template-columns: 1fr; }
     .status { min-width: 0; }
     .topbar-right { display: none; }
-    .palette-strip-wrap { width: 36px; }
+    .palette-strip-wrap { width: 64px; }
 }
