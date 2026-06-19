@@ -1,0 +1,397 @@
+/* Pixels Begone - minimal dark theme, square corners, muted indigo accent. */
+
+:root {
+    --bg: #0d0d12;
+    --surface: #15151d;
+    --surface-2: #1b1b25;
+    --border: #26262f;
+    --border-strong: #34343f;
+    --text: #e6e6ee;
+    --text-secondary: #8a8a9a;
+    --accent: #8b87f0;
+    --accent-press: #7a76e0;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+}
+
+body {
+    padding: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.shell {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Top bar */
+.topbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 2px 6px;
+}
+.topbar h1 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+.topbar .subtitle {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    margin-left: 6px;
+}
+.topbar .brand-icon {
+    color: var(--accent);
+}
+
+/* Workspace: two panels side by side */
+.workspace {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.panel-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+}
+.panel-head h2 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.panel-head iconify-icon {
+    color: var(--accent);
+}
+
+.canvas-frame {
+    flex: 1;
+    min-height: 280px;
+    background: #0a0a0f;
+    border: 1px solid var(--border);
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    transition: border-color 0.15s;
+}
+.canvas-frame.drag {
+    border-color: var(--accent);
+}
+
+canvas {
+    max-width: 100%;
+    max-height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    padding: 24px;
+    cursor: pointer;
+    text-align: center;
+}
+.placeholder .upload-icon {
+    color: var(--text-secondary);
+}
+.placeholder:hover {
+    color: var(--text);
+}
+.placeholder:hover .upload-icon {
+    color: var(--accent);
+}
+.placeholder .hint {
+    font-size: 0.7rem;
+    opacity: 0.7;
+}
+
+.no-result {
+    color: #555;
+    font-size: 0.8rem;
+}
+
+/* Stats */
+.stats {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+.stats strong {
+    color: var(--text);
+    font-weight: 600;
+}
+.stats iconify-icon {
+    color: var(--accent);
+}
+.stats .reduction {
+    margin-left: 4px;
+}
+
+/* Controls grid */
+.controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.control-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.card-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.card-head h3 {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.card-head iconify-icon {
+    color: var(--accent);
+}
+.card-head .switch {
+    margin-right: auto;
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Slider fields */
+.field {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 4px 10px;
+    font-size: 0.75rem;
+}
+.field label {
+    color: var(--text-secondary);
+    grid-column: 1;
+    grid-row: 1;
+}
+.field .val {
+    color: var(--accent);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    min-width: 28px;
+    grid-column: 2;
+    grid-row: 1;
+}
+.field input[type="range"] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    height: 3px;
+    background: var(--border-strong);
+    border-radius: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    outline: none;
+}
+.field input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    background: var(--accent);
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+}
+.field input[type="range"]::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: var(--accent);
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+}
+
+.field-note {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* Square checkbox switch */
+.switch {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+.switch input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.switch-mark {
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--border-strong);
+    background: var(--bg);
+    border-radius: 0;
+    position: relative;
+    display: inline-block;
+    transition: background 0.12s, border-color 0.12s;
+}
+.switch input:checked + .switch-mark {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+.switch input:checked + .switch-mark::after {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 0;
+    width: 4px;
+    height: 8px;
+    border: solid var(--bg);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+.switch input:focus-visible + .switch-mark {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Actions row */
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 4px 0 0;
+}
+
+button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: var(--bg);
+    border: 1px solid var(--accent);
+    padding: 9px 18px;
+    border-radius: 0;
+    font-weight: 600;
+    font-size: 0.82rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+button:hover {
+    background: var(--accent-press);
+    border-color: var(--accent-press);
+}
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+button.secondary {
+    background: transparent;
+    color: var(--text);
+    border-color: var(--border-strong);
+}
+button.secondary:hover {
+    background: var(--surface-2);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 200px;
+}
+.progress-bar {
+    flex: 1;
+    height: 3px;
+    background: var(--border);
+    border-radius: 0;
+    overflow: hidden;
+}
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.15s;
+}
+.status {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    min-width: 140px;
+    white-space: nowrap;
+}
+
+/* Make sure iconify icons inherit color and don't stretch layout */
+iconify-icon {
+    display: inline-flex;
+    vertical-align: middle;
+}
+
+@media (max-width: 760px) {
+    body { padding: 12px; }
+    .workspace { grid-template-columns: 1fr; }
+    .status { min-width: 0; }
+}

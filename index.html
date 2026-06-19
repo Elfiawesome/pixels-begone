@@ -3,683 +3,176 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎮 Pixel Art Refiner – Region‑Aware + Denoise + Outline Fix</title>
-    <style>
-        :root {
-            --bg: #0f0f16;
-            --surface: #1a1a26;
-            --border: #2a2a3a;
-            --accent: #a78bfa;
-            --text: #e4e4f0;
-            --text-secondary: #9898b0;
-            --radius: 16px;
-        }
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            background-image:
-                radial-gradient(ellipse at 30% 20%, #7c3aed10 0%, transparent 50%),
-                radial-gradient(ellipse at 70% 80%, #3b82f610 0%, transparent 50%);
-        }
-        .app {
-            width: 100%;
-            max-width: 1200px;
-            display: flex;
-            gap: 24px;
-            background: var(--surface);
-            border-radius: 28px;
-            padding: 24px;
-            box-shadow: 0 30px 80px rgba(0,0,0,0.6);
-            border: 1px solid var(--border);
-            min-height: 700px;
-        }
-        .panel {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: #1e1e2c;
-            border-radius: var(--radius);
-            padding: 16px;
-            min-width: 0;
-        }
-        .panel h2 {
-            font-size: 1rem;
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: var(--text);
-            letter-spacing: -0.01em;
-        }
-        .canvas-container {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #111118;
-            border-radius: 10px;
-            overflow: hidden;
-            border: 1px solid var(--border);
-            min-height: 250px;
-            position: relative;
-        }
-        canvas {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            image-rendering: pixelated;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        }
-        .placeholder {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            color: var(--text-secondary);
-            cursor: pointer;
-            padding: 20px;
-        }
-        .placeholder:hover {
-            color: #fff;
-        }
-        .placeholder .icon {
-            font-size: 3rem;
-        }
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin: 12px 0;
-            align-items: center;
-        }
-        .control-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: #0f0f16;
-            border-radius: 20px;
-            padding: 6px 14px;
-            border: 1px solid var(--border);
-        }
-        .control-group label {
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            color: var(--text-secondary);
-        }
-        input[type="range"] {
-            width: 80px;
-            background: #333;
-            height: 4px;
-            border-radius: 2px;
-            -webkit-appearance: none;
-            cursor: pointer;
-        }
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
-            background: var(--accent);
-            border-radius: 50%;
-            border: 2px solid white;
-            cursor: pointer;
-        }
-        .value-display {
-            font-weight: 600;
-            font-size: 0.8rem;
-            min-width: 24px;
-            text-align: center;
-            color: var(--accent);
-        }
-        button {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 24px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: 0.2s;
-            font-family: inherit;
-            box-shadow: 0 4px 12px #a78bfa44;
-        }
-        button:hover {
-            background: #b69efc;
-            box-shadow: 0 6px 20px #a78bfa66;
-        }
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-        .action-row {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        #downloadBtn {
-            background: #2e2e3e;
-            box-shadow: none;
-        }
-        #downloadBtn:hover {
-            background: #3e3e52;
-        }
-        .status {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            min-height: 20px;
-        }
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-        .checkbox-group input {
-            margin-right: 4px;
-        }
-        .palette-stats {
-            display: flex;
-            gap: 16px;
-            margin-top: 8px;
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-        .palette-stats strong {
-            color: var(--text);
-        }
-        @media (max-width: 850px) {
-            .app {
-                flex-direction: column;
-                min-height: auto;
-            }
-        }
-    </style>
+    <title>Pixels Begone - Pixel Art Refiner</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
 </head>
 <body>
-    <div class="app">
-        <!-- Left: Original Image -->
-        <div class="panel">
-            <h2>📥 Original Image</h2>
-            <div class="canvas-container" id="leftContainer">
-                <div class="placeholder" id="placeholder">
-                    <span class="icon">🖼️</span>
-                    <span>Drop or click to upload</span>
-                    <span style="font-size:0.7rem;">PNG / JPG / WEBP</span>
+    <div class="shell">
+        <header class="topbar">
+            <iconify-icon icon="ph:sparkle-bold" class="brand-icon" width="22"></iconify-icon>
+            <h1>Pixels Begone</h1>
+            <span class="subtitle">Region-aware pixel art refiner</span>
+        </header>
+
+        <div class="workspace">
+            <section class="panel">
+                <div class="panel-head">
+                    <iconify-icon icon="ph:image-bold" width="18"></iconify-icon>
+                    <h2>Original</h2>
                 </div>
-                <canvas id="originalCanvas" style="display:none;"></canvas>
-            </div>
-            <div class="palette-stats" id="originalStats" style="display:none;">
-                <span>🎨 Unique colors: <strong id="origColorCount">—</strong></span>
-            </div>
-            <input type="file" id="fileInput" accept="image/*" hidden>
+                <div class="canvas-frame" id="leftContainer">
+                    <div class="placeholder" id="placeholder">
+                        <iconify-icon icon="ph:upload-simple-bold" width="32" class="upload-icon"></iconify-icon>
+                        <span>Drop, paste, or click to upload</span>
+                        <span class="hint">PNG / JPG / WEBP</span>
+                    </div>
+                    <canvas id="originalCanvas" class="hidden"></canvas>
+                </div>
+                <div class="stats" id="originalStats" hidden>
+                    <iconify-icon icon="ph:palette-bold" width="15"></iconify-icon>
+                    <span>Unique colors: <strong id="origColorCount">-</strong></span>
+                </div>
+                <input type="file" id="fileInput" accept="image/*" hidden>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <iconify-icon icon="ph:sparkle-bold" width="18"></iconify-icon>
+                    <h2>Refined</h2>
+                </div>
+                <div class="canvas-frame" id="rightContainer">
+                    <canvas id="refinedCanvas" class="hidden"></canvas>
+                    <span class="no-result" id="noResult">Processed image will appear here</span>
+                </div>
+                <div class="stats" id="refinedStats" hidden>
+                    <iconify-icon icon="ph:palette-bold" width="15"></iconify-icon>
+                    <span>Unique colors: <strong id="refColorCount">-</strong></span>
+                    <span class="reduction">(<span id="reductionPercent">-</span> reduction)</span>
+                </div>
+            </section>
         </div>
 
-        <!-- Right: Refined Image + Controls -->
-        <div class="panel">
-            <h2>✨ Refined Pixel Art</h2>
-            <div class="canvas-container" id="rightContainer">
-                <canvas id="refinedCanvas" style="display:none;"></canvas>
-                <span style="color: #666;" id="noResult">Processed image will appear here</span>
-            </div>
-            <div class="palette-stats" id="refinedStats" style="display:none;">
-                <span>🎨 Unique colors: <strong id="refColorCount">—</strong></span>
-                <span>(<span id="reductionPercent">—</span> reduction)</span>
-            </div>
-            <div class="controls">
-                <div class="control-group">
-                    <label>Segments</label>
-                    <input type="range" id="segmentsSlider" min="20" max="250" value="100" step="10">
-                    <span class="value-display" id="segmentsValue">100</span>
+        <section class="controls">
+            <div class="control-card">
+                <div class="card-head">
+                    <iconify-icon icon="ph:sliders-bold" width="18"></iconify-icon>
+                    <h3>Segmentation</h3>
                 </div>
-                <div class="control-group">
-                    <label>Colors/segment</label>
-                    <input type="range" id="colorsPerSlider" min="1" max="5" value="2" step="1">
-                    <span class="value-display" id="colorsPerValue">2</span>
-                </div>
-            </div>
-            <div class="controls" style="margin-top:0;">
-                <div class="checkbox-group">
-                    <input type="checkbox" id="denoiseCheckbox" checked>
-                    <label for="denoiseCheckbox">Remove isolated noise pixels</label>
-                </div>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="outlineCheckbox" checked>
-                    <label for="outlineCheckbox">Consolidate outlines</label>
+                <div class="card-body">
+                    <div class="field">
+                        <label for="segmentsSlider">Segments</label>
+                        <span class="val" id="segmentsValue">100</span>
+                        <input type="range" id="segmentsSlider" min="20" max="1000" value="100" step="10">
+                    </div>
+                    <div class="field">
+                        <label for="colorsPerSlider">Colors / segment</label>
+                        <span class="val" id="colorsPerValue">2</span>
+                        <input type="range" id="colorsPerSlider" min="1" max="16" value="2" step="1">
+                    </div>
+                    <div class="field">
+                        <label for="compactnessSlider">Segment compactness</label>
+                        <span class="val" id="compactnessValue">0.8</span>
+                        <input type="range" id="compactnessSlider" min="0.2" max="1.5" value="0.8" step="0.1">
+                    </div>
                 </div>
             </div>
-            <div class="action-row">
-                <button id="processBtn" disabled>🎨 Refine Pixel Art</button>
-                <button id="downloadBtn" disabled>⬇️ Download Refined</button>
+
+            <div class="control-card">
+                <div class="card-head">
+                    <label class="switch" title="Toggle despeckle">
+                        <input type="checkbox" id="denoiseCheckbox" checked>
+                        <span class="switch-mark"></span>
+                    </label>
+                    <iconify-icon icon="ph:eraser-bold" width="18"></iconify-icon>
+                    <h3>Despeckle</h3>
+                </div>
+                <div class="card-body">
+                    <div class="field">
+                        <label for="denoiseSizeSlider">Max noise size</label>
+                        <span class="val" id="denoiseSizeValue">3</span>
+                        <input type="range" id="denoiseSizeSlider" min="1" max="8" value="3" step="1">
+                    </div>
+                    <div class="field">
+                        <label for="denoiseSimSlider">Similarity</label>
+                        <span class="val" id="denoiseSimValue">6</span>
+                        <input type="range" id="denoiseSimSlider" min="1" max="15" value="6" step="1">
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-card">
+                <div class="card-head">
+                    <label class="switch" title="Toggle line consolidation">
+                        <input type="checkbox" id="linesCheckbox" checked>
+                        <span class="switch-mark"></span>
+                    </label>
+                    <iconify-icon icon="ph:paint-brush-broad-bold" width="18"></iconify-icon>
+                    <h3>Consolidate lines</h3>
+                </div>
+                <div class="card-body">
+                    <div class="field">
+                        <label for="lineWidthSlider">Max width</label>
+                        <span class="val" id="lineWidthValue">2</span>
+                        <input type="range" id="lineWidthSlider" min="1" max="3" value="2" step="1">
+                    </div>
+                    <div class="field">
+                        <label for="lineTolSlider">Unify tolerance</label>
+                        <span class="val" id="lineTolValue">10</span>
+                        <input type="range" id="lineTolSlider" min="1" max="25" value="10" step="1">
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-card">
+                <div class="card-head">
+                    <label class="switch" title="Toggle palette merge">
+                        <input type="checkbox" id="paletteMergeCheckbox" checked>
+                        <span class="switch-mark"></span>
+                    </label>
+                    <iconify-icon icon="ph:stack-bold" width="18"></iconify-icon>
+                    <h3>Palette merge</h3>
+                </div>
+                <div class="card-body">
+                    <div class="field">
+                        <label for="paletteTolSlider">Tolerance</label>
+                        <span class="val" id="paletteTolValue">8</span>
+                        <input type="range" id="paletteTolSlider" min="0" max="30" value="8" step="1">
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-card">
+                <div class="card-head">
+                    <label class="switch" title="Toggle jaggie cleanup">
+                        <input type="checkbox" id="jaggiesCheckbox">
+                        <span class="switch-mark"></span>
+                    </label>
+                    <iconify-icon icon="ph:square-bold" width="18"></iconify-icon>
+                    <h3>Jaggie cleanup</h3>
+                </div>
+                <div class="card-body">
+                    <p class="field-note">Removes single-pixel staircase corners on edges. Off by default; can soften crisp detail.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="actions">
+            <button id="processBtn" class="primary" disabled>
+                <iconify-icon icon="ph:sparkle-bold" width="18"></iconify-icon>
+                <span>Refine</span>
+            </button>
+            <button id="downloadBtn" class="secondary" disabled>
+                <iconify-icon icon="ph:download-simple-bold" width="18"></iconify-icon>
+                <span>Download</span>
+            </button>
+            <div class="progress-wrap">
+                <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
                 <span class="status" id="statusText"></span>
             </div>
-        </div>
+        </section>
     </div>
 
-    <script>
-        (function() {
-            const placeholder = document.getElementById('placeholder');
-            const fileInput = document.getElementById('fileInput');
-            const originalCanvas = document.getElementById('originalCanvas');
-            const refinedCanvas = document.getElementById('refinedCanvas');
-            const leftContainer = document.getElementById('leftContainer');
-            const noResult = document.getElementById('noResult');
-            const processBtn = document.getElementById('processBtn');
-            const downloadBtn = document.getElementById('downloadBtn');
-            const segmentsSlider = document.getElementById('segmentsSlider');
-            const colorsPerSlider = document.getElementById('colorsPerSlider');
-            const segmentsValue = document.getElementById('segmentsValue');
-            const colorsPerValue = document.getElementById('colorsPerValue');
-            const denoiseCheckbox = document.getElementById('denoiseCheckbox');
-            const outlineCheckbox = document.getElementById('outlineCheckbox');
-            const statusText = document.getElementById('statusText');
-            const origColorCountSpan = document.getElementById('origColorCount');
-            const refColorCountSpan = document.getElementById('refColorCount');
-            const reductionPercentSpan = document.getElementById('reductionPercent');
-            const originalStatsDiv = document.getElementById('originalStats');
-            const refinedStatsDiv = document.getElementById('refinedStats');
-
-            let originalImage = null;
-            let originalImageData = null;
-            let refinedImageDataURL = null;
-
-            segmentsSlider.addEventListener('input', () => segmentsValue.textContent = segmentsSlider.value);
-            colorsPerSlider.addEventListener('input', () => colorsPerValue.textContent = colorsPerSlider.value);
-
-            placeholder.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', e => {
-                if (e.target.files[0]) loadImage(e.target.files[0]);
-            });
-
-            leftContainer.addEventListener('dragover', e => {
-                e.preventDefault();
-                leftContainer.style.boxShadow = '0 0 0 3px #a78bfa';
-            });
-            leftContainer.addEventListener('dragleave', () => {
-                leftContainer.style.boxShadow = '';
-            });
-            leftContainer.addEventListener('drop', e => {
-                e.preventDefault();
-                leftContainer.style.boxShadow = '';
-                const file = e.dataTransfer.files[0];
-                if (file) loadImage(file);
-            });
-
-            document.addEventListener('paste', e => {
-                const items = e.clipboardData?.items;
-                if (items) {
-                    for (const item of items) {
-                        if (item.type.startsWith('image/')) {
-                            e.preventDefault();
-                            loadImage(item.getAsFile());
-                            return;
-                        }
-                    }
-                }
-            });
-
-            function loadImage(file) {
-                if (!file.type.startsWith('image/')) return;
-                const reader = new FileReader();
-                reader.onload = ev => {
-                    const img = new Image();
-                    img.onload = () => {
-                        originalImage = img;
-                        const maxDim = 400;
-                        let w = img.width, h = img.height;
-                        if (Math.max(w, h) > maxDim) {
-                            const ratio = maxDim / Math.max(w, h);
-                            w = Math.round(w * ratio);
-                            h = Math.round(h * ratio);
-                        }
-                        originalCanvas.width = w;
-                        originalCanvas.height = h;
-                        const ctx = originalCanvas.getContext('2d');
-                        ctx.clearRect(0, 0, w, h);
-                        ctx.drawImage(img, 0, 0, w, h);
-                        originalImageData = ctx.getImageData(0, 0, w, h);
-                        placeholder.style.display = 'none';
-                        originalCanvas.style.display = 'block';
-                        processBtn.disabled = false;
-                        statusText.textContent = '';
-                        refinedCanvas.style.display = 'none';
-                        noResult.style.display = 'block';
-                        downloadBtn.disabled = true;
-                        refinedStatsDiv.style.display = 'none';
-                        // compute original unique color count
-                        const unique = countUniqueColors(originalImageData);
-                        origColorCountSpan.textContent = unique;
-                        originalStatsDiv.style.display = 'flex';
-                    };
-                    img.src = ev.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-
-            function countUniqueColors(imageData) {
-                const data = imageData.data;
-                const colorSet = new Set();
-                for (let i = 0; i < data.length; i += 4) {
-                    if (data[i+3] < 128) continue;
-                    const key = `${data[i]},${data[i+1]},${data[i+2]}`;
-                    colorSet.add(key);
-                }
-                return colorSet.size;
-            }
-
-            function rgbToLab(r, g, b) {
-                let rr = r / 255, gg = g / 255, bb = b / 255;
-                rr = rr > 0.04045 ? Math.pow((rr + 0.055) / 1.055, 2.4) : rr / 12.92;
-                gg = gg > 0.04045 ? Math.pow((gg + 0.055) / 1.055, 2.4) : gg / 12.92;
-                bb = bb > 0.04045 ? Math.pow((bb + 0.055) / 1.055, 2.4) : bb / 12.92;
-                const x = (rr * 0.4124 + gg * 0.3576 + bb * 0.1805) / 0.95047;
-                const y = (rr * 0.2126 + gg * 0.7152 + bb * 0.0722) / 1.00000;
-                const z = (rr * 0.0193 + gg * 0.1192 + bb * 0.9505) / 1.08883;
-                const f = t => t > 0.008856 ? Math.cbrt(t) : (7.787 * t) + 16 / 116;
-                const fx = f(x), fy = f(y), fz = f(z);
-                const L = (116 * fy) - 16;
-                const a = 500 * (fx - fy);
-                const bVal = 200 * (fy - fz);
-                return { L, a, b: bVal };
-            }
-
-            function kmeans(data, k, maxIter = 20) {
-                const n = data.length;
-                if (n === 0) return { centroids: [], labels: [] };
-                const dim = data[0].length;
-                const centroids = [];
-                centroids.push(data[Math.floor(Math.random() * n)].slice());
-                for (let c = 1; c < k; c++) {
-                    const dists = new Array(n).fill(Infinity);
-                    for (let i = 0; i < n; i++) {
-                        for (let j = 0; j < centroids.length; j++) {
-                            let d = 0;
-                            for (let dIdx = 0; dIdx < dim; dIdx++) d += (data[i][dIdx] - centroids[j][dIdx]) ** 2;
-                            if (d < dists[i]) dists[i] = d;
-                        }
-                    }
-                    const sum = dists.reduce((a, b) => a + b, 0);
-                    let r = Math.random() * sum;
-                    for (let i = 0; i < n; i++) {
-                        r -= dists[i];
-                        if (r <= 0) { centroids.push(data[i].slice()); break; }
-                    }
-                }
-                let labels = new Array(n);
-                for (let iter = 0; iter < maxIter; iter++) {
-                    for (let i = 0; i < n; i++) {
-                        let minDist = Infinity, best = 0;
-                        for (let j = 0; j < k; j++) {
-                            let d = 0;
-                            for (let dIdx = 0; dIdx < dim; dIdx++) d += (data[i][dIdx] - centroids[j][dIdx]) ** 2;
-                            if (d < minDist) { minDist = d; best = j; }
-                        }
-                        labels[i] = best;
-                    }
-                    const sums = new Array(k).fill(0).map(() => new Array(dim).fill(0));
-                    const counts = new Array(k).fill(0);
-                    for (let i = 0; i < n; i++) {
-                        const lbl = labels[i];
-                        counts[lbl]++;
-                        for (let d = 0; d < dim; d++) sums[lbl][d] += data[i][d];
-                    }
-                    let changed = false;
-                    for (let j = 0; j < k; j++) {
-                        if (counts[j] === 0) continue;
-                        for (let d = 0; d < dim; d++) {
-                            const newVal = sums[j][d] / counts[j];
-                            if (Math.abs(newVal - centroids[j][d]) > 0.001) changed = true;
-                            centroids[j][d] = newVal;
-                        }
-                    }
-                    if (!changed) break;
-                }
-                return { centroids, labels };
-            }
-
-            async function refinePixelArt() {
-                if (!originalImageData) return;
-                statusText.textContent = 'Processing...';
-                processBtn.disabled = true;
-                downloadBtn.disabled = true;
-
-                const K = parseInt(segmentsSlider.value);
-                const colorsPerSegment = parseInt(colorsPerSlider.value);
-                const applyDenoise = denoiseCheckbox.checked;
-                const applyOutlineFix = outlineCheckbox.checked;
-                const imgData = originalImageData;
-                const width = imgData.width;
-                const height = imgData.height;
-                const pixels = imgData.data;
-                const totalPixels = width * height;
-
-                // Build feature vectors for superpixels
-                const features = [];
-                const pixelIndices = [];
-                for (let i = 0; i < totalPixels; i++) {
-                    const r = pixels[i*4], g = pixels[i*4+1], b = pixels[i*4+2], a = pixels[i*4+3];
-                    if (a < 128) continue;
-                    const { L, a: labA, b: labB } = rgbToLab(r, g, b);
-                    const xNorm = (i % width) / Math.max(1, width-1);
-                    const yNorm = Math.floor(i / width) / Math.max(1, height-1);
-                    features.push([L, labA, labB, xNorm, yNorm]);
-                    pixelIndices.push(i);
-                }
-                if (features.length === 0) {
-                    statusText.textContent = 'No pixels to process.';
-                    processBtn.disabled = false;
-                    return;
-                }
-                const spatialWeight = 0.8;
-                const weightedFeatures = features.map(f => [
-                    f[0], f[1], f[2],
-                    f[3] * spatialWeight * 100,
-                    f[4] * spatialWeight * 100
-                ]);
-
-                const segResult = await new Promise(resolve => setTimeout(() => resolve(kmeans(weightedFeatures, K, 15)), 10));
-                const { labels: segLabels } = segResult;
-
-                // Group pixels by segment
-                const segments = new Map();
-                for (let i = 0; i < features.length; i++) {
-                    const lbl = segLabels[i];
-                    if (!segments.has(lbl)) segments.set(lbl, []);
-                    const idx = pixelIndices[i];
-                    segments.get(lbl).push({
-                        r: pixels[idx*4], g: pixels[idx*4+1], b: pixels[idx*4+2],
-                        pixelIndex: idx
-                    });
-                }
-
-                // Create new pixel array
-                const newPixels = new Uint8ClampedArray(pixels.length);
-                for (let i = 0; i < totalPixels; i++) newPixels[i*4+3] = pixels[i*4+3];
-
-                // Per-segment quantization
-                for (let [segId, segPixels] of segments.entries()) {
-                    const colorVecs = segPixels.map(p => [p.r, p.g, p.b]);
-                    const kLocal = Math.min(colorsPerSegment, new Set(colorVecs.map(c => c.join(','))).size);
-                    let localCentroids, localLabels;
-                    if (kLocal === 1) {
-                        localCentroids = [colorVecs[0]];
-                        localLabels = new Array(colorVecs.length).fill(0);
-                    } else {
-                        const localRes = kmeans(colorVecs, kLocal, 10);
-                        localCentroids = localRes.centroids;
-                        localLabels = localRes.labels;
-                    }
-                    for (let i = 0; i < segPixels.length; i++) {
-                        const cent = localCentroids[localLabels[i]];
-                        const r = Math.round(Math.min(255, Math.max(0, cent[0])));
-                        const g = Math.round(Math.min(255, Math.max(0, cent[1])));
-                        const b = Math.round(Math.min(255, Math.max(0, cent[2])));
-                        const idx = segPixels[i].pixelIndex;
-                        newPixels[idx*4] = r;
-                        newPixels[idx*4+1] = g;
-                        newPixels[idx*4+2] = b;
-                    }
-                }
-
-                // Post-processing: despeckle (remove isolated pixels)
-                if (applyDenoise) {
-                    const temp = new Uint8ClampedArray(newPixels);
-                    for (let y = 1; y < height-1; y++) {
-                        for (let x = 1; x < width-1; x++) {
-                            const idx = (y*width + x)*4;
-                            const r = newPixels[idx], g = newPixels[idx+1], b = newPixels[idx+2];
-                            // count neighbors of same color
-                            let sameCount = 0;
-                            const neighborColors = {};
-                            for (let dy = -1; dy <= 1; dy++) {
-                                for (let dx = -1; dx <= 1; dx++) {
-                                    if (dx === 0 && dy === 0) continue;
-                                    const ni = ((y+dy)*width + (x+dx))*4;
-                                    const nr = newPixels[ni], ng = newPixels[ni+1], nb = newPixels[ni+2];
-                                    if (nr === r && ng === g && nb === b) sameCount++;
-                                    const key = `${nr},${ng},${nb}`;
-                                    neighborColors[key] = (neighborColors[key] || 0) + 1;
-                                }
-                            }
-                            if (sameCount <= 2) { // isolated
-                                let bestKey = null, bestCount = 0;
-                                for (const [key, count] of Object.entries(neighborColors)) {
-                                    if (count > bestCount) { bestCount = count; bestKey = key; }
-                                }
-                                if (bestKey) {
-                                    const [nr, ng, nb] = bestKey.split(',').map(Number);
-                                    temp[idx] = nr; temp[idx+1] = ng; temp[idx+2] = nb;
-                                }
-                            }
-                        }
-                    }
-                    for (let i = 0; i < newPixels.length; i++) newPixels[i] = temp[i];
-                }
-
-                // Post-processing: consolidate outlines
-                if (applyOutlineFix) {
-                    // Build segment map from refined pixels (recompute segments based on color)
-                    const colorToSeg = new Map();
-                    let segCounter = 0;
-                    const segMap = new Int32Array(totalPixels).fill(-1);
-                    for (let i = 0; i < totalPixels; i++) {
-                        const r = newPixels[i*4], g = newPixels[i*4+1], b = newPixels[i*4+2];
-                        const key = `${r},${g},${b}`;
-                        if (!colorToSeg.has(key)) colorToSeg.set(key, segCounter++);
-                        segMap[i] = colorToSeg.get(key);
-                    }
-
-                    const isEdge = new Uint8Array(totalPixels);
-                    for (let y = 0; y < height; y++) {
-                        for (let x = 0; x < width; x++) {
-                            const idx = y*width + x;
-                            const seg = segMap[idx];
-                            if (seg < 0) continue;
-                            let edge = false;
-                            if (x>0 && segMap[idx-1] !== seg) edge = true;
-                            else if (x<width-1 && segMap[idx+1] !== seg) edge = true;
-                            else if (y>0 && segMap[idx-width] !== seg) edge = true;
-                            else if (y<height-1 && segMap[idx+width] !== seg) edge = true;
-                            isEdge[idx] = edge ? 1 : 0;
-                        }
-                    }
-
-                    const refinedPixels = new Uint8ClampedArray(newPixels);
-                    for (let y = 1; y < height-1; y++) {
-                        for (let x = 1; x < width-1; x++) {
-                            const idx = y*width + x;
-                            if (!isEdge[idx]) continue;
-                            // count edge neighbors
-                            let edgeNeighbors = 0;
-                            for (let dy = -1; dy <= 1; dy++) {
-                                for (let dx = -1; dx <= 1; dx++) {
-                                    if (dx === 0 && dy === 0) continue;
-                                    if (isEdge[(y+dy)*width + (x+dx)]) edgeNeighbors++;
-                                }
-                            }
-                            if (edgeNeighbors < 2) {
-                                // fill with most frequent neighbor segment color
-                                const neighborSegCounts = {};
-                                for (let dy = -1; dy <= 1; dy++) {
-                                    for (let dx = -1; dx <= 1; dx++) {
-                                        if (dx === 0 && dy === 0) continue;
-                                        const nidx = (y+dy)*width + (x+dx);
-                                        const nseg = segMap[nidx];
-                                        if (nseg >= 0) neighborSegCounts[nseg] = (neighborSegCounts[nseg] || 0) + 1;
-                                    }
-                                }
-                                let bestSeg = null, bestCount = 0;
-                                for (const [seg, count] of Object.entries(neighborSegCounts)) {
-                                    if (count > bestCount) { bestCount = count; bestSeg = parseInt(seg); }
-                                }
-                                if (bestSeg !== null) {
-                                    // find a pixel with that segment to copy color
-                                    for (let dy = -1; dy <= 1; dy++) {
-                                        for (let dx = -1; dx <= 1; dx++) {
-                                            const nidx = (y+dy)*width + (x+dx);
-                                            if (segMap[nidx] === bestSeg) {
-                                                refinedPixels[idx*4] = newPixels[nidx*4];
-                                                refinedPixels[idx*4+1] = newPixels[nidx*4+1];
-                                                refinedPixels[idx*4+2] = newPixels[nidx*4+2];
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    for (let i = 0; i < newPixels.length; i++) newPixels[i] = refinedPixels[i];
-                }
-
-                // Display refined image
-                refinedCanvas.width = width;
-                refinedCanvas.height = height;
-                const ctx = refinedCanvas.getContext('2d');
-                const finalImgData = new ImageData(newPixels, width, height);
-                ctx.putImageData(finalImgData, 0, 0);
-                refinedCanvas.style.display = 'block';
-                noResult.style.display = 'none';
-                refinedImageDataURL = refinedCanvas.toDataURL('image/png');
-                downloadBtn.disabled = false;
-
-                const refinedUnique = countUniqueColors(finalImgData);
-                refColorCountSpan.textContent = refinedUnique;
-                const origUnique = parseInt(origColorCountSpan.textContent) || 1;
-                const reduction = ((1 - refinedUnique / origUnique) * 100).toFixed(1);
-                reductionPercentSpan.textContent = reduction + '%';
-                refinedStatsDiv.style.display = 'flex';
-
-                statusText.textContent = `Done – ${segments.size} segments, max ${colorsPerSegment} colors each`;
-                processBtn.disabled = false;
-            }
-
-            processBtn.addEventListener('click', refinePixelArt);
-
-            downloadBtn.addEventListener('click', () => {
-                if (refinedImageDataURL) {
-                    const link = document.createElement('a');
-                    link.download = 'refined-pixelart.png';
-                    link.href = refinedImageDataURL;
-                    link.click();
-                }
-            });
-
-            segmentsValue.textContent = segmentsSlider.value;
-            colorsPerValue.textContent = colorsPerSlider.value;
-        })();
-    </script>
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>
