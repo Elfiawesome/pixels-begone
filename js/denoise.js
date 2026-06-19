@@ -7,12 +7,20 @@
 //      This groups the "aggregated" surrounding shades into one component even
 //      when they are not exactly identical (which the old exact-match despeckle
 //      could not do).
-//   2. Any component with size <= `maxNoiseSize` is treated as noise.
-//   3. Replace every noise pixel with the color of the adjacent component that
-//      shares the longest border (tie-break: Lab-nearest). The replacement color
-//      is read from a real pixel of that neighbor, so no new colors are
-//      introduced.
-//   4. Repeat up to 3 passes until stable. Borders are handled by only walking
+//   2. Any component with size <= `maxNoiseSize` is a *candidate* noise blob.
+//   3. Two guards decide whether to actually replace it (these prevent the
+//      over-aggression that destroyed gradients at low params):
+//        a) Min contrast: the candidate's color must differ from the chosen
+//           replacement by at least `minContrast` in Lab space. Gradient pixels
+//           (Lab dist ~1-3 from neighbors) are left untouched; true outliers
+//           (e.g. a red dot in a gray field, dist > 8) are removed.
+//        b) Dominance: the winning neighbor must cover >= 50% of the candidate's
+//           border. Enforces "obviously surrounded by a single color". If the
+//           border is split between many different colors it is not isolated
+//           noise, so it is preserved.
+//   4. The replacement color is read from a real pixel of the winning neighbor
+//      component, so no new colors are introduced.
+//   5. Repeat up to 3 passes until stable. Borders are handled by only walking
 //      in-bounds neighbors.
 
 import { rgbToLab, labDist2Px } from './color.js';
@@ -20,7 +28,9 @@ import { rgbToLab, labDist2Px } from './color.js';
 export function denoise(pixels, width, height, options) {
     const maxNoiseSize = options.maxNoiseSize;
     const similarity = options.similarity;
+    const minContrast = options.minContrast;
     const sim2 = similarity * similarity;
+    const minContrast2 = minContrast * minContrast;
     const total = width * height;
     const queue = new Int32Array(total);
 
@@ -41,6 +51,7 @@ export function denoise(pixels, width, height, options) {
         // Connected components (similarity threshold, 4-connectivity).
         const labels = new Int32Array(total).fill(-1);
         const compMembers = [];
+        const compSeed = []; // representative pixel index per component
         let nextLabel = 0;
         for (let seed = 0; seed < total; seed++) {
             if (!opaque[seed] || labels[seed] !== -1) continue;
@@ -78,6 +89,7 @@ export function denoise(pixels, width, height, options) {
                 }
             }
             compMembers.push(members);
+            compSeed.push(seed);
             nextLabel++;
         }
 
@@ -89,20 +101,21 @@ export function denoise(pixels, width, height, options) {
 
             const borderCount = new Map(); // adjLabel -> shared border length
             const adjPixel = new Map();    // adjLabel -> example neighbor pixel
+            let totalBorder = 0;
             for (const p of members) {
                 const px = p % width;
                 const py = (p / width) | 0;
-                if (px > 0) inspectNeighbor(p - 1, li, labels, opaque, borderCount, adjPixel);
-                if (px < width - 1) inspectNeighbor(p + 1, li, labels, opaque, borderCount, adjPixel);
-                if (py > 0) inspectNeighbor(p - width, li, labels, opaque, borderCount, adjPixel);
-                if (py < height - 1) inspectNeighbor(p + width, li, labels, opaque, borderCount, adjPixel);
+                if (px > 0) { totalBorder += inspectNeighbor(p - 1, li, labels, opaque, borderCount, adjPixel); }
+                if (px < width - 1) { totalBorder += inspectNeighbor(p + 1, li, labels, opaque, borderCount, adjPixel); }
+                if (py > 0) { totalBorder += inspectNeighbor(p - width, li, labels, opaque, borderCount, adjPixel); }
+                if (py < height - 1) { totalBorder += inspectNeighbor(p + width, li, labels, opaque, borderCount, adjPixel); }
             }
-            if (borderCount.size === 0) continue;
+            if (borderCount.size === 0 || totalBorder === 0) continue;
 
             // Pick the adjacent component with the longest shared border.
             // Tie-break: Lab distance from the noise seed to that neighbor pixel.
             let bestLabel = -1, bestCount = -1, bestDist = Infinity;
-            const seedPixel = members[0];
+            const seedPixel = compSeed[li];
             for (const [nl, cnt] of borderCount) {
                 const d = labDist2Px(lab, seedPixel, adjPixel.get(nl));
                 if (cnt > bestCount || (cnt === bestCount && d < bestDist)) {
@@ -111,7 +124,16 @@ export function denoise(pixels, width, height, options) {
             }
             if (bestLabel === -1) continue;
 
+            // Guard a: dominance - winner must STRICTLY own more than 50% of the
+            // border (enforces "obviously surrounded by a single color"). A pixel
+            // sitting at a junction between two or more large regions is preserved.
+            if (bestCount * 2 <= totalBorder) continue;
+
+            // Guard b: min contrast - candidate must be a real outlier vs. the
+            // replacement. Prevents flattening of gentle gradients.
             const target = adjPixel.get(bestLabel);
+            if (labDist2Px(lab, seedPixel, target) < minContrast2) continue;
+
             const tr = pixels[target * 4];
             const tg = pixels[target * 4 + 1];
             const tb = pixels[target * 4 + 2];
@@ -127,10 +149,12 @@ export function denoise(pixels, width, height, options) {
     }
 }
 
+// Returns 1 if the neighbor was a valid border pixel (recorded), 0 otherwise.
 function inspectNeighbor(np, ownLabel, labels, opaque, borderCount, adjPixel) {
-    if (!opaque[np]) return;
+    if (!opaque[np]) return 0;
     const nl = labels[np];
-    if (nl === ownLabel) return;
+    if (nl === ownLabel) return 0;
     borderCount.set(nl, (borderCount.get(nl) || 0) + 1);
     if (!adjPixel.has(nl)) adjPixel.set(nl, np);
+    return 1;
 }

@@ -61,6 +61,37 @@ body {
 .topbar .brand-icon {
     color: var(--accent);
 }
+.topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.topbar-right .sort-icon {
+    color: var(--text-secondary);
+}
+.topbar-right .sort-label {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Shared select + textarea + number input styling */
+.select {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: 0;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+}
+.select:focus {
+    border-color: var(--accent);
+}
 
 /* Workspace: two panels side by side */
 .workspace {
@@ -96,9 +127,15 @@ body {
     color: var(--accent);
 }
 
+.canvas-row {
+    flex: 1;
+    display: flex;
+    gap: 8px;
+    min-height: 280px;
+}
+
 .canvas-frame {
     flex: 1;
-    min-height: 280px;
     background: #0a0a0f;
     border: 1px solid var(--border);
     border-radius: 0;
@@ -111,6 +148,53 @@ body {
 }
 .canvas-frame.drag {
     border-color: var(--accent);
+}
+
+/* Stack that holds the image canvas + overlay so the overlay can sit exactly on
+   top of the image. Sized by the flex frame; image scales to fit. */
+.canvas-stack {
+    position: relative;
+    max-width: 100%;
+    max-height: 100%;
+    line-height: 0;
+}
+.canvas-stack canvas {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.palette-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    opacity: 0;
+    transition: opacity 0.1s;
+}
+.palette-overlay.visible {
+    opacity: 1;
+}
+
+/* Vertical swatch strip beside the canvas. */
+.palette-strip-wrap {
+    width: 44px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 0;
+}
+.palette-strip {
+    display: block;
+    width: 100%;
+    max-height: none;
+    image-rendering: pixelated;
+    cursor: crosshair;
 }
 
 canvas {
@@ -232,9 +316,22 @@ canvas {
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     text-align: right;
-    min-width: 28px;
+    min-width: 44px;
     grid-column: 2;
     grid-row: 1;
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 0;
+    padding: 2px 4px;
+    font-size: 0.72rem;
+    font-family: inherit;
+    outline: none;
+}
+.field .val:focus {
+    border-color: var(--accent);
+}
+.field .val::-webkit-inner-spin-button {
+    opacity: 0.4;
 }
 .field input[type="range"] {
     grid-column: 1 / -1;
@@ -270,6 +367,44 @@ canvas {
     font-size: 0.7rem;
     color: var(--text-secondary);
     line-height: 1.5;
+}
+
+/* Select inside a field: span full width in row 2 like a slider. */
+.field .select {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+}
+
+/* Textarea field (custom palette input): block layout, full width. */
+.field-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.75rem;
+}
+.field-text label {
+    color: var(--text-secondary);
+}
+.field-text textarea {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: 0;
+    padding: 6px;
+    font-size: 0.72rem;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    resize: vertical;
+    outline: none;
+    width: 100%;
+    min-height: 40px;
+}
+.field-text textarea:focus {
+    border-color: var(--accent);
+}
+
+.palette-count {
+    margin-left: 4px;
 }
 
 /* Square checkbox switch */
@@ -390,8 +525,47 @@ iconify-icon {
     vertical-align: middle;
 }
 
+/* Toast for copy feedback */
+.toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: var(--accent);
+    color: var(--bg);
+    padding: 8px 16px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    border-radius: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s, transform 0.15s;
+    z-index: 100;
+}
+.toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Palette strip scrollbar (subtle) */
+.palette-strip-wrap::-webkit-scrollbar {
+    width: 6px;
+}
+.palette-strip-wrap::-webkit-scrollbar-track {
+    background: var(--bg);
+}
+.palette-strip-wrap::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+}
+.palette-strip-wrap::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+}
+
 @media (max-width: 760px) {
     body { padding: 12px; }
     .workspace { grid-template-columns: 1fr; }
     .status { min-width: 0; }
+    .topbar-right { display: none; }
+    .palette-strip-wrap { width: 36px; }
 }

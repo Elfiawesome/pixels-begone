@@ -13,6 +13,15 @@
             <iconify-icon icon="ph:sparkle-bold" class="brand-icon" width="22"></iconify-icon>
             <h1>Pixels Begone</h1>
             <span class="subtitle">Region-aware pixel art refiner</span>
+            <div class="topbar-right">
+                <iconify-icon icon="ph:sort-descending-bold" width="16" class="sort-icon"></iconify-icon>
+                <label for="paletteSortSelect" class="sort-label">Palette sort</label>
+                <select id="paletteSortSelect" class="select">
+                    <option value="freq">Frequency</option>
+                    <option value="bright">Brightness</option>
+                    <option value="hue">Hue</option>
+                </select>
+            </div>
         </header>
 
         <div class="workspace">
@@ -21,17 +30,26 @@
                     <iconify-icon icon="ph:image-bold" width="18"></iconify-icon>
                     <h2>Original</h2>
                 </div>
-                <div class="canvas-frame" id="leftContainer">
-                    <div class="placeholder" id="placeholder">
-                        <iconify-icon icon="ph:upload-simple-bold" width="32" class="upload-icon"></iconify-icon>
-                        <span>Drop, paste, or click to upload</span>
-                        <span class="hint">PNG / JPG / WEBP</span>
+                <div class="canvas-row">
+                    <div class="canvas-frame" id="leftContainer">
+                        <div class="placeholder" id="placeholder">
+                            <iconify-icon icon="ph:upload-simple-bold" width="32" class="upload-icon"></iconify-icon>
+                            <span>Drop, paste, or click to upload</span>
+                            <span class="hint">PNG / JPG / WEBP</span>
+                        </div>
+                        <div class="canvas-stack">
+                            <canvas id="originalCanvas" class="hidden"></canvas>
+                            <canvas id="origOverlay" class="palette-overlay"></canvas>
+                        </div>
                     </div>
-                    <canvas id="originalCanvas" class="hidden"></canvas>
+                    <div class="palette-strip-wrap">
+                        <canvas id="origPaletteCanvas" class="palette-strip"></canvas>
+                    </div>
                 </div>
                 <div class="stats" id="originalStats" hidden>
                     <iconify-icon icon="ph:palette-bold" width="15"></iconify-icon>
                     <span>Unique colors: <strong id="origColorCount">-</strong></span>
+                    <span class="palette-count">(<span id="origPaletteCount">0</span> shown)</span>
                 </div>
                 <input type="file" id="fileInput" accept="image/*" hidden>
             </section>
@@ -41,14 +59,21 @@
                     <iconify-icon icon="ph:sparkle-bold" width="18"></iconify-icon>
                     <h2>Refined</h2>
                 </div>
-                <div class="canvas-frame" id="rightContainer">
-                    <canvas id="refinedCanvas" class="hidden"></canvas>
-                    <span class="no-result" id="noResult">Processed image will appear here</span>
+                <div class="canvas-row">
+                    <div class="canvas-frame" id="rightContainer">
+                        <canvas id="refinedCanvas" class="hidden"></canvas>
+                        <canvas id="refOverlay" class="palette-overlay"></canvas>
+                        <span class="no-result" id="noResult">Processed image will appear here</span>
+                    </div>
+                    <div class="palette-strip-wrap">
+                        <canvas id="refPaletteCanvas" class="palette-strip"></canvas>
+                    </div>
                 </div>
                 <div class="stats" id="refinedStats" hidden>
                     <iconify-icon icon="ph:palette-bold" width="15"></iconify-icon>
                     <span>Unique colors: <strong id="refColorCount">-</strong></span>
                     <span class="reduction">(<span id="reductionPercent">-</span> reduction)</span>
+                    <span class="palette-count">(<span id="refPaletteCount">0</span> shown)</span>
                 </div>
             </section>
         </div>
@@ -62,17 +87,17 @@
                 <div class="card-body">
                     <div class="field">
                         <label for="segmentsSlider">Segments</label>
-                        <span class="val" id="segmentsValue">100</span>
+                        <input type="number" class="val" id="segmentsValue" min="20" max="1000" step="10" value="100">
                         <input type="range" id="segmentsSlider" min="20" max="1000" value="100" step="10">
                     </div>
                     <div class="field">
                         <label for="colorsPerSlider">Colors / segment</label>
-                        <span class="val" id="colorsPerValue">2</span>
+                        <input type="number" class="val" id="colorsPerValue" min="1" max="16" step="1" value="2">
                         <input type="range" id="colorsPerSlider" min="1" max="16" value="2" step="1">
                     </div>
                     <div class="field">
                         <label for="compactnessSlider">Segment compactness</label>
-                        <span class="val" id="compactnessValue">0.8</span>
+                        <input type="number" class="val" id="compactnessValue" min="0.2" max="1.5" step="0.1" value="0.8">
                         <input type="range" id="compactnessSlider" min="0.2" max="1.5" value="0.8" step="0.1">
                     </div>
                 </div>
@@ -90,13 +115,18 @@
                 <div class="card-body">
                     <div class="field">
                         <label for="denoiseSizeSlider">Max noise size</label>
-                        <span class="val" id="denoiseSizeValue">3</span>
+                        <input type="number" class="val" id="denoiseSizeValue" min="1" max="8" step="1" value="3">
                         <input type="range" id="denoiseSizeSlider" min="1" max="8" value="3" step="1">
                     </div>
                     <div class="field">
                         <label for="denoiseSimSlider">Similarity</label>
-                        <span class="val" id="denoiseSimValue">6</span>
+                        <input type="number" class="val" id="denoiseSimValue" min="1" max="15" step="1" value="6">
                         <input type="range" id="denoiseSimSlider" min="1" max="15" value="6" step="1">
+                    </div>
+                    <div class="field">
+                        <label for="denoiseMcSlider">Min contrast</label>
+                        <input type="number" class="val" id="denoiseMcValue" min="1" max="20" step="1" value="8">
+                        <input type="range" id="denoiseMcSlider" min="1" max="20" value="8" step="1">
                     </div>
                 </div>
             </div>
@@ -113,12 +143,12 @@
                 <div class="card-body">
                     <div class="field">
                         <label for="lineWidthSlider">Max width</label>
-                        <span class="val" id="lineWidthValue">2</span>
+                        <input type="number" class="val" id="lineWidthValue" min="1" max="3" step="1" value="2">
                         <input type="range" id="lineWidthSlider" min="1" max="3" value="2" step="1">
                     </div>
                     <div class="field">
                         <label for="lineTolSlider">Unify tolerance</label>
-                        <span class="val" id="lineTolValue">10</span>
+                        <input type="number" class="val" id="lineTolValue" min="1" max="25" step="1" value="10">
                         <input type="range" id="lineTolSlider" min="1" max="25" value="10" step="1">
                     </div>
                 </div>
@@ -136,7 +166,7 @@
                 <div class="card-body">
                     <div class="field">
                         <label for="paletteTolSlider">Tolerance</label>
-                        <span class="val" id="paletteTolValue">8</span>
+                        <input type="number" class="val" id="paletteTolValue" min="0" max="30" step="1" value="8">
                         <input type="range" id="paletteTolSlider" min="0" max="30" value="8" step="1">
                     </div>
                 </div>
@@ -153,6 +183,131 @@
                 </div>
                 <div class="card-body">
                     <p class="field-note">Removes single-pixel staircase corners on edges. Off by default; can soften crisp detail.</p>
+                </div>
+            </div>
+
+            <div class="control-card">
+                <div class="card-head">
+                    <label class="switch" title="Toggle hue jitter reduction">
+                        <input type="checkbox" id="hueSnapCheckbox">
+                        <span class="switch-mark"></span>
+                    </label>
+                    <iconify-icon icon="ph:rainbow-bold" width="18"></iconify-icon>
+                    <h3>Hue jitter reduction</h3>
+                </div>
+                <div class="card-body">
+                    <div class="field">
+                        <label for="hueSnapTolSlider">Tolerance</label>
+                        <input type="number" class="val" id="hueSnapTolValue" min="1" max="30" step="1" value="8">
+                        <input type="range" id="hueSnapTolSlider" min="1" max="30" value="8" step="1">
+                    </div>
+                    <p class="field-note">Snaps hue drift within a surface to one dominant hue. Keeps L and S.</p>
+                </div>
+            </div>
+
+            <div class="control-card">
+                <div class="card-head">
+                    <label class="switch" title="Toggle pillow-shading removal">
+                        <input type="checkbox" id="pillowCheckbox">
+                        <span class="switch-mark"></span>
+                    </label>
+                    <iconify-icon icon="ph:circle-bold" width="18"></iconify-icon>
+                    <h3>Pillow-shading removal</h3>
+                </div>
+                <div class="card-body">
+                    <div class="field">
+                        <label for="pillowStrSlider">Strength</label>
+                        <input type="number" class="val" id="pillowStrValue" min="0" max="100" step="5" value="50">
+                        <input type="range" id="pillowStrSlider" min="0" max="100" value="50" step="5">
+                    </div>
+                    <p class="field-note">Replaces dark-edge/bright-center AI pillow shading with directional light. Experimental.</p>
+                </div>
+            </div>
+
+            <div class="control-card">
+                <div class="card-head">
+                    <label class="switch" title="Toggle saturation/contrast boost">
+                        <input type="checkbox" id="colorAdjustCheckbox">
+                        <span class="switch-mark"></span>
+                    </label>
+                    <iconify-icon icon="ph:drop-bold" width="18"></iconify-icon>
+                    <h3>Saturation / contrast</h3>
+                </div>
+                <div class="card-body">
+                    <div class="field">
+                        <label for="satSlider">Saturation %</label>
+                        <input type="number" class="val" id="satValue" min="0" max="200" step="5" value="130">
+                        <input type="range" id="satSlider" min="0" max="200" value="130" step="5">
+                    </div>
+                    <div class="field">
+                        <label for="conSlider">Contrast %</label>
+                        <input type="number" class="val" id="conValue" min="0" max="200" step="5" value="110">
+                        <input type="range" id="conSlider" min="0" max="200" value="110" step="5">
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-card">
+                <div class="card-head">
+                    <label class="switch" title="Toggle final color-count cap">
+                        <input type="checkbox" id="colorCapCheckbox">
+                        <span class="switch-mark"></span>
+                    </label>
+                    <iconify-icon icon="ph:scales-bold" width="18"></iconify-icon>
+                    <h3>Color-count cap</h3>
+                </div>
+                <div class="card-body">
+                    <div class="field">
+                        <label for="colorCapTargetSlider">Target colors</label>
+                        <input type="number" class="val" id="colorCapTargetValue" min="2" max="64" step="1" value="16">
+                        <input type="range" id="colorCapTargetSlider" min="2" max="64" value="16" step="1">
+                    </div>
+                    <p class="field-note">Median-cut emergency brake on total colors, independent of segments.</p>
+                </div>
+            </div>
+
+            <div class="control-card">
+                <div class="card-head">
+                    <label class="switch" title="Toggle palette snap">
+                        <input type="checkbox" id="paletteSnapCheckbox">
+                        <span class="switch-mark"></span>
+                    </label>
+                    <iconify-icon icon="ph:target-bold" width="18"></iconify-icon>
+                    <h3>Palette snap</h3>
+                </div>
+                <div class="card-body">
+                    <div class="field">
+                        <label for="paletteSnapPaletteSelect">Palette</label>
+                        <select id="paletteSnapPaletteSelect" class="select">
+                            <option value="pico8">PICO-8 (16)</option>
+                        </select>
+                    </div>
+                    <div class="field field-text">
+                        <label for="paletteSnapCustomInput">Custom hex (for Custom)</label>
+                        <textarea id="paletteSnapCustomInput" rows="2" placeholder="#1a1c2c, #5d275d, ..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-card">
+                <div class="card-head">
+                    <label class="switch" title="Toggle ordered dithering">
+                        <input type="checkbox" id="ditherCheckbox">
+                        <span class="switch-mark"></span>
+                    </label>
+                    <iconify-icon icon="ph:grid-four-bold" width="18"></iconify-icon>
+                    <h3>Ordered dithering</h3>
+                </div>
+                <div class="card-body">
+                    <div class="field">
+                        <label for="ditherMatrixSelect">Matrix</label>
+                        <select id="ditherMatrixSelect" class="select">
+                            <option value="2">2x2</option>
+                            <option value="4" selected>4x4</option>
+                            <option value="8">8x8</option>
+                        </select>
+                    </div>
+                    <p class="field-note">Bayer dithering across the final palette. Off by default.</p>
                 </div>
             </div>
         </section>
@@ -172,6 +327,8 @@
             </div>
         </section>
     </div>
+
+    <div class="toast" id="toast"></div>
 
     <script type="module" src="js/main.js"></script>
 </body>

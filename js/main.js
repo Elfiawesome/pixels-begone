@@ -1,7 +1,14 @@
-// UI wiring: file/drag/paste input, control -> options mapping, worker host,
-// progress + stats display, download. No algorithm logic lives here.
+// UI wiring: file/drag/paste input, control <-> options mapping (driven by
+// config.js), URL hash persistence, worker host, progress + stats display,
+// palette panels (hover highlight + click-to-copy), download.
+//
+// No algorithm logic lives here. Defaults come from DEFAULTS in config.js so the
+// starting state can be re-tuned in one place.
 
+import { DEFAULTS, URL_KEYS, KEY_FROM_URL, CONTROLS } from './config.js';
 import { countUniqueColors } from './color.js';
+import { PalettePanel } from './palette.js';
+import { PALETTES } from './palette-snap.js';
 
 const PHASE_LABELS = {
     'segment': 'Segmenting',
@@ -9,7 +16,13 @@ const PHASE_LABELS = {
     'palette-merge': 'Merging palette',
     'denoise': 'Despeckling',
     'lines': 'Consolidating lines',
-    'jaggies': 'Cleaning edges'
+    'jaggies': 'Cleaning edges',
+    'hue-snap': 'Reducing hue jitter',
+    'pillow': 'Removing pillow shading',
+    'color-adjust': 'Adjusting colors',
+    'color-cap': 'Capping colors',
+    'palette-snap': 'Snapping to palette',
+    'dither': 'Dithering'
 };
 
 const $ = id => document.getElementById(id);
@@ -28,27 +41,187 @@ const els = {
     refinedStats: $('refinedStats'),
     origColorCount: $('origColorCount'),
     refColorCount: $('refColorCount'),
-    reductionPercent: $('reductionPercent')
+    reductionPercent: $('reductionPercent'),
+    toast: $('toast'),
+    paletteSortSelect: $('paletteSortSelect')
 };
 
-// Sync every slider with its value label.
-const sliderPairs = [
-    ['segmentsSlider', 'segmentsValue'],
-    ['colorsPerSlider', 'colorsPerValue'],
-    ['compactnessSlider', 'compactnessValue'],
-    ['denoiseSizeSlider', 'denoiseSizeValue'],
-    ['denoiseSimSlider', 'denoiseSimValue'],
-    ['lineWidthSlider', 'lineWidthValue'],
-    ['lineTolSlider', 'lineTolValue'],
-    ['paletteTolSlider', 'paletteTolValue']
-];
-for (const [sId, vId] of sliderPairs) {
-    const s = $(sId), v = $(vId);
-    const sync = () => { v.textContent = s.value; };
-    s.addEventListener('input', sync);
-    sync();
+// ---- Control system: bind every control from CONTROLS, sync slider<->number,
+//      and apply DEFAULTS on load. ----
+
+const controlEls = {}; // key -> { slider?, number?, checkbox?, select?, text? }
+
+for (const c of CONTROLS) {
+    const entry = {};
+    if (c.kind === 'range') {
+        entry.slider = $(c.id);
+        entry.number = $(c.numId);
+    } else {
+        entry.main = $(c.id);
+    }
+    controlEls[c.key] = entry;
 }
 
+function applyDefault(key) {
+    const val = DEFAULTS[key];
+    const entry = controlEls[key];
+    if (!entry) return;
+    if (entry.slider) {
+        entry.slider.value = val;
+        entry.number.value = val;
+    } else if (entry.main) {
+        if (entry.main.type === 'checkbox') entry.main.checked = val;
+        else entry.main.value = val;
+    }
+}
+
+function readControl(key) {
+    const entry = controlEls[key];
+    if (!entry) return DEFAULTS[key];
+    if (entry.slider) {
+        // Prefer the number input (allows exceeding slider range); fall back to
+        // the slider if the number field is empty/invalid.
+        const n = entry.number.value;
+        if (n !== '' && !isNaN(Number(n))) return Number(n);
+        return Number(entry.slider.value);
+    }
+    if (entry.main.type === 'checkbox') return entry.main.checked;
+    if (entry.main.tagName === 'SELECT') {
+        const v = entry.main.value;
+        return typeof DEFAULTS[key] === 'number' ? Number(v) : v;
+    }
+    return entry.main.value;
+}
+
+// Wire slider <-> number sync for every range control, plus change listeners
+// that update the URL hash (debounced).
+let urlTimer = null;
+function scheduleUrlUpdate() {
+    clearTimeout(urlTimer);
+    urlTimer = setTimeout(updateUrlHash, 300);
+}
+
+for (const c of CONTROLS) {
+    if (c.kind === 'range') {
+        const { slider, number } = controlEls[c.key];
+        slider.addEventListener('input', () => {
+            number.value = slider.value;
+            scheduleUrlUpdate();
+        });
+        number.addEventListener('input', () => {
+            // Let the slider pin to its end if the typed value is out of range;
+            // the algorithm uses the typed value via readControl.
+            slider.value = number.value;
+            scheduleUrlUpdate();
+        });
+    } else {
+        const m = controlEls[c.key].main;
+        m.addEventListener('change', scheduleUrlUpdate);
+        if (m.type === 'checkbox' || m.tagName === 'SELECT') {
+            m.addEventListener('input', scheduleUrlUpdate);
+        }
+    }
+}
+
+// Apply DEFAULTS, then override from the URL hash if present.
+function applyAllDefaults() {
+    for (const key of Object.keys(DEFAULTS)) applyDefault(key);
+}
+function applyFromUrl() {
+    const params = parseHash();
+    for (const [urlKey, raw] of Object.entries(params)) {
+        const optKey = KEY_FROM_URL[urlKey];
+        if (!optKey) continue;
+        applyValue(optKey, raw);
+    }
+}
+function applyValue(key, raw) {
+    const def = DEFAULTS[key];
+    const entry = controlEls[key];
+    if (!entry) return;
+    let val;
+    if (typeof def === 'boolean') val = raw === '1' || raw === 'true';
+    else if (typeof def === 'number') val = Number(raw);
+    else val = raw;
+    if (entry.slider) {
+        entry.slider.value = val;
+        entry.number.value = val;
+    } else if (entry.main) {
+        if (entry.main.type === 'checkbox') entry.main.checked = val;
+        else entry.main.value = val;
+    }
+}
+
+// ---- URL hash (de)serialization ----
+
+function parseHash() {
+    const h = location.hash.slice(1);
+    if (!h) return {};
+    const out = {};
+    for (const pair of h.split('&')) {
+        if (!pair) continue;
+        const eq = pair.indexOf('=');
+        if (eq < 0) { out[pair] = ''; continue; }
+        out[pair.slice(0, eq)] = decodeURIComponent(pair.slice(eq + 1));
+    }
+    return out;
+}
+
+function updateUrlHash() {
+    const parts = [];
+    for (const key of Object.keys(DEFAULTS)) {
+        const val = readControl(key);
+        const urlKey = URL_KEYS[key];
+        if (val === DEFAULTS[key]) continue; // omit defaults to keep URLs short
+        let s;
+        if (typeof val === 'boolean') s = val ? '1' : '0';
+        else s = String(val);
+        parts.push(urlKey + '=' + encodeURIComponent(s));
+    }
+    const newHash = parts.length ? '#' + parts.join('&') : '';
+    if (location.hash !== newHash) {
+        history.replaceState(null, '', newHash || location.pathname);
+    }
+}
+
+// ---- Palette snap dropdown population ----
+(function populatePaletteSnap() {
+    const sel = $('paletteSnapPaletteSelect');
+    if (!sel) return;
+    sel.innerHTML = ''; // replace the static fallback option
+    for (const [key, p] of Object.entries(PALETTES)) {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = key === 'custom' ? PALETTES.custom.name : p.name;
+        sel.appendChild(opt);
+    }
+})();
+
+// ---- Palette panels ----
+let currentSort = DEFAULTS.paletteSort;
+const origPalette = new PalettePanel({
+    imageCanvas: els.originalCanvas,
+    stripCanvas: $('origPaletteCanvas'),
+    overlay: $('origOverlay'),
+    toast: els.toast,
+    countEl: $('origPaletteCount'),
+    getSort: () => currentSort
+});
+const refPalette = new PalettePanel({
+    imageCanvas: els.refinedCanvas,
+    stripCanvas: $('refPaletteCanvas'),
+    overlay: $('refOverlay'),
+    toast: els.toast,
+    countEl: $('refPaletteCount'),
+    getSort: () => currentSort
+});
+els.paletteSortSelect.addEventListener('change', () => {
+    currentSort = els.paletteSortSelect.value;
+    origPalette.resort();
+    refPalette.resort();
+});
+
+// ---- Worker ----
 let originalImageData = null;
 let originalUnique = 0;
 let refinedImageDataURL = null;
@@ -83,6 +256,9 @@ worker.onmessage = (e) => {
         els.statusText.textContent = 'Done - ' + stats.segments + ' segments, ' + stats.finalColors + ' colors';
         els.progressFill.style.width = '100%';
         els.processBtn.disabled = false;
+
+        // Update the refined palette panel with the result.
+        refPalette.setImage(imgData);
     } else if (msg.type === 'error') {
         els.statusText.textContent = 'Error: ' + msg.message;
         els.progressFill.style.width = '0%';
@@ -91,20 +267,9 @@ worker.onmessage = (e) => {
 };
 
 function buildOptions() {
-    return {
-        segments: parseInt($('segmentsSlider').value, 10),
-        colorsPerSegment: parseInt($('colorsPerSlider').value, 10),
-        spatialWeight: parseFloat($('compactnessSlider').value),
-        denoise: $('denoiseCheckbox').checked,
-        denoiseSize: parseInt($('denoiseSizeSlider').value, 10),
-        denoiseSimilarity: parseInt($('denoiseSimSlider').value, 10),
-        lines: $('linesCheckbox').checked,
-        lineWidth: parseInt($('lineWidthSlider').value, 10),
-        lineTolerance: parseInt($('lineTolSlider').value, 10),
-        paletteMerge: $('paletteMergeCheckbox').checked,
-        paletteTolerance: parseInt($('paletteTolSlider').value, 10),
-        jaggies: $('jaggiesCheckbox').checked
-    };
+    const o = {};
+    for (const key of Object.keys(DEFAULTS)) o[key] = readControl(key);
+    return o;
 }
 
 function loadImage(file) {
@@ -140,6 +305,9 @@ function loadImage(file) {
             originalUnique = countUniqueColors(originalImageData.data);
             els.origColorCount.textContent = originalUnique;
             els.originalStats.hidden = false;
+
+            // Populate the original palette panel.
+            origPalette.setImage(originalImageData);
         };
         img.src = ev.target.result;
     };
@@ -183,8 +351,6 @@ els.processBtn.addEventListener('click', () => {
     els.downloadBtn.disabled = true;
     els.statusText.textContent = 'Starting...';
     els.progressFill.style.width = '0%';
-    // Send a fresh copy of the original pixels (transferred) so the original is
-    // preserved on the main thread for re-processing with different options.
     const copy = new Uint8ClampedArray(originalImageData.data);
     worker.postMessage({
         data: copy,
@@ -201,3 +367,10 @@ els.downloadBtn.addEventListener('click', () => {
     link.href = refinedImageDataURL;
     link.click();
 });
+
+// ---- Init: apply defaults, then URL overrides ----
+applyAllDefaults();
+applyFromUrl();
+// The sort select may have been overridden by the URL; sync currentSort.
+currentSort = readControl('paletteSort');
+updateUrlHash();

@@ -1,14 +1,20 @@
 // Pipeline orchestrator. Reproduces the original segment-then-quantize
 // behavior (parity at defaults with the old despeckle/outline off), then runs
-// the new opt-in post-processing stages in a fixed order:
+// the opt-in post-processing stages in a fixed order:
 //
 //   1. Build Lab + spatial features
 //   2. k-means -> K superpixel segments
 //   3. Per-segment k-means on RGB -> quantize each segment to <= colorsPerSegment
 //   4. Palette merge      (optional)
-//   5. Despeckle          (optional)
+//   5. Despeckle          (optional, now with min-contrast + dominance guards)
 //   6. Consolidate lines  (optional)
 //   7. Jaggie cleanup     (optional)
+//   8. Hue jitter reduction (optional)
+//   9. Pillow-shading removal (optional)
+//  10. Saturation/contrast boost (optional)
+//  11. Final color-count cap (optional)
+//  12. Palette snap (optional)
+//  13. Ordered dithering (optional, last so it spreads the final palette)
 //
 // `onProgress({ phase, pct })` is called between stages so the worker can report
 // status to the UI.
@@ -19,6 +25,12 @@ import { mergePalette } from './palette-merge.js';
 import { denoise } from './denoise.js';
 import { consolidateLines } from './lines.js';
 import { cleanJaggies } from './edges.js';
+import { snapHue } from './hue-snap.js';
+import { removePillow } from './pillow.js';
+import { adjustColors } from './color-adjust.js';
+import { capColors } from './color-cap.js';
+import { snapToPalette, getPalette } from './palette-snap.js';
+import { ditherImage } from './dither.js';
 
 export function refine(imageData, options, onProgress) {
     const width = imageData.width;
@@ -106,12 +118,13 @@ export function refine(imageData, options, onProgress) {
         report('palette-merge', 1);
     }
 
-    // 5. Despeckle.
+    // 5. Despeckle (with min-contrast + dominance guards).
     if (options.denoise) {
         report('denoise', 0);
         denoise(out, width, height, {
             maxNoiseSize: options.denoiseSize,
-            similarity: options.denoiseSimilarity
+            similarity: options.denoiseSimilarity,
+            minContrast: options.denoiseMinContrast
         });
         report('denoise', 1);
     }
@@ -131,6 +144,49 @@ export function refine(imageData, options, onProgress) {
         report('jaggies', 0);
         cleanJaggies(out, width, height);
         report('jaggies', 1);
+    }
+
+    // 8. Hue jitter reduction.
+    if (options.hueSnap) {
+        report('hue-snap', 0);
+        snapHue(out, width, height, { tolerance: options.hueSnapTolerance });
+        report('hue-snap', 1);
+    }
+
+    // 9. Pillow-shading removal.
+    if (options.pillow) {
+        report('pillow', 0);
+        removePillow(out, width, height, { strength: options.pillowStrength });
+        report('pillow', 1);
+    }
+
+    // 10. Saturation / contrast boost.
+    if (options.colorAdjust) {
+        report('color-adjust', 0);
+        adjustColors(out, { saturation: options.saturation, contrast: options.contrast });
+        report('color-adjust', 1);
+    }
+
+    // 11. Final color-count cap.
+    if (options.colorCap) {
+        report('color-cap', 0);
+        capColors(out, { target: options.colorCapTarget });
+        report('color-cap', 1);
+    }
+
+    // 12. Palette snap.
+    if (options.paletteSnap) {
+        report('palette-snap', 0);
+        const paletteColors = getPalette(options.paletteSnapPalette, options.paletteSnapCustom);
+        snapToPalette(out, { paletteColors });
+        report('palette-snap', 1);
+    }
+
+    // 13. Ordered dithering (last, spreads the finalized palette).
+    if (options.dither) {
+        report('dither', 0);
+        ditherImage(out, width, height, { matrix: options.ditherMatrix });
+        report('dither', 1);
     }
 
     const resultImageData = new ImageData(out, width, height);
