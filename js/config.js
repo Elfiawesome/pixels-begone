@@ -8,17 +8,17 @@ export const DEFAULTS = {
     colorsPerSegment: 2,
     spatialWeight: 0.8,
     // Despeckle
-    denoise: true,
+    denoise: false,
     denoiseSize: 3,
     denoiseSimilarity: 6,
     denoiseMinContrast: 8,
     // Lines
     lines: true,
     lineWidth: 2,
-    lineTolerance: 10,
+    lineTolerance: 1,
     // Palette merge
     paletteMerge: true,
-    paletteTolerance: 8,
+    paletteTolerance: 1,
     // Jaggies
     jaggies: false,
     // Hue jitter reduction
@@ -42,7 +42,7 @@ export const DEFAULTS = {
     dither: false,
     ditherMatrix: 4,
     // Palette display sort (shared by both palette strips)
-    paletteSort: 'freq'
+    paletteSort: 'hue'
 };
 
 // Short keys for URL hash serialization. keep in sync with DEFAULTS keys.
